@@ -351,8 +351,13 @@
 </head>
 <body>
 <div class="app">
-  <h1>Shadow boxing timer</h1>
+  <h1 id="appTitle">Shadow boxing timer</h1>
   <div class="subtitle">Beginner combo-guided rounds</div>
+
+  <div class="tabs" id="programTabs">
+    <button class="tab-btn" id="programBoxingBtn">Shadow boxing</button>
+    <button class="tab-btn" id="programCalisthenicsBtn">Calisthenics</button>
+  </div>
 
   <div class="tabs">
     <button class="tab-btn active" id="tabTimerBtn">Timer</button>
@@ -387,7 +392,7 @@
       <button id="startBtn" class="primary">Start</button>
     </div>
 
-    <div class="rule">Hands return to guard after every punch.<br>No exceptions, even in round 4.</div>
+    <div class="rule" id="timerRuleText">Hands return to guard after every punch. No exceptions, even in later rounds.</div>
   </div>
 
   <div id="editView" class="hidden">
@@ -426,47 +431,103 @@
 (function() {
   const RESTP = 60;
 
-  const STORAGE_KEY = "shadowBoxPlansV2";
-  const OLD_STORAGE_KEY = "shadowBoxPlans";
+  const ACTIVE_PROGRAM_KEY = "shadowBoxActiveProgram";
 
-  const defaultRoundPlans = [
-    {
-      label: "Round 1 — singles",
-      segs: [
-        { combo: "1, 1, 1", note: "Jab only — reset guard each time" },
-        { combo: "2, 2, 2", note: "Cross only — rotate hips" },
-        { combo: "1-2, 1-2, 1-2", note: "Return to guard after each" }
+  const PROGRAMS = {
+    boxing: {
+      name: "Shadow boxing",
+      storageKey: "shadowBoxPlansV2",
+      oldStorageKey: "shadowBoxPlans",
+      comboPlaceholder: "Combo, e.g. 1-2-3",
+      comboLabel: "Punches",
+      ruleText: "Hands return to guard after every punch. No exceptions, even in later rounds.",
+      warmupPlaceholder: "e.g. Jog, arm circles, torso twists",
+      defaultWarmup: {
+        durationMin: 3,
+        text: "Jog, arm circles, torso twists, squats"
+      },
+      defaultRounds: [
+        {
+          label: "Round 1 — singles",
+          segs: [
+            { combo: "1, 1, 1", note: "Jab only — reset guard each time" },
+            { combo: "2, 2, 2", note: "Cross only — rotate hips" },
+            { combo: "1-2, 1-2, 1-2", note: "Return to guard after each" }
+          ]
+        },
+        {
+          label: "Round 2 — add hooks",
+          segs: [
+            { combo: "1-2-3", note: "Jab, cross, lead hook" },
+            { combo: "3-2", note: "Lead hook, cross" },
+            { combo: "1-2-3-2", note: "Slow and controlled" }
+          ]
+        },
+        {
+          label: "Round 3 — speed + movement",
+          segs: [
+            { combo: "Footwork only", note: "Step in, step out, pivot — no punches" },
+            { combo: "1-1-2", note: "Double jab, cross — step forward" },
+            { combo: "1-2-1", note: "Step back after the last jab" }
+          ]
+        },
+        {
+          label: "Round 4 — under fatigue",
+          segs: [
+            { combo: "1-2-3-2", note: "No pause between reps" },
+            { combo: "Freestyle", note: "Mix combos, slip left/right" },
+            { combo: "1-2, 1-2, 1-2", note: "Max output, guard up between reps" }
+          ]
+        }
       ]
     },
-    {
-      label: "Round 2 — add hooks",
-      segs: [
-        { combo: "1-2-3", note: "Jab, cross, lead hook" },
-        { combo: "3-2", note: "Lead hook, cross" },
-        { combo: "1-2-3-2", note: "Slow and controlled" }
-      ]
-    },
-    {
-      label: "Round 3 — speed + movement",
-      segs: [
-        { combo: "Footwork only", note: "Step in, step out, pivot — no punches" },
-        { combo: "1-1-2", note: "Double jab, cross — step forward" },
-        { combo: "1-2-1", note: "Step back after the last jab" }
-      ]
-    },
-    {
-      label: "Round 4 — under fatigue",
-      segs: [
-        { combo: "1-2-3-2", note: "No pause between reps" },
-        { combo: "Freestyle", note: "Mix combos, slip left/right" },
-        { combo: "1-2, 1-2, 1-2", note: "Max output, guard up between reps" }
+    calisthenics: {
+      name: "Calisthenics",
+      storageKey: "calisthenicsPlansV1",
+      oldStorageKey: null,
+      comboPlaceholder: "Exercise, e.g. 15 squats",
+      comboLabel: "Exercise",
+      ruleText: "Form over reps. A slow, full-range rep beats a fast, sloppy one.",
+      warmupPlaceholder: "e.g. Jog in place, arm circles, leg swings",
+      defaultWarmup: {
+        durationMin: 3,
+        text: "Jog in place, arm circles, leg swings, bodyweight squats"
+      },
+      defaultRounds: [
+        {
+          label: "Round 1 — squats",
+          segs: [
+            { combo: "15 squats", note: "Controlled tempo, full depth" },
+            { combo: "15 squats", note: "Keep chest up, weight in heels" },
+            { combo: "15 squats", note: "Drive up through the heels" }
+          ]
+        },
+        {
+          label: "Round 2 — push-ups",
+          segs: [
+            { combo: "Max push-ups", note: "Knee push-ups are fine to start" },
+            { combo: "Max push-ups", note: "Chest to the ground each rep" },
+            { combo: "Max push-ups", note: "Keep core tight, no sagging hips" }
+          ]
+        },
+        {
+          label: "Round 3 — plank hold",
+          segs: [
+            { combo: "20-30 sec hold, rest, repeat", note: "Keep hips level" },
+            { combo: "20-30 sec hold, rest, repeat", note: "Breathe steady, don't hold breath" },
+            { combo: "20-30 sec hold, rest, repeat", note: "Squeeze glutes and core" }
+          ]
+        },
+        {
+          label: "Round 4 — lunges",
+          segs: [
+            { combo: "10 lunges per leg", note: "Step long, knee over ankle" },
+            { combo: "10 lunges per leg", note: "Alternate legs each rep" },
+            { combo: "10 lunges per leg", note: "Keep torso upright" }
+          ]
+        }
       ]
     }
-  ];
-
-  const defaultWarmup = {
-    durationMin: 3,
-    text: "Jog, arm circles, torso twists, squats"
   };
 
   function clonePlans(plans) {
@@ -477,38 +538,47 @@
     return { durationMin: w.durationMin, text: w.text };
   }
 
-  function loadState() {
+  function loadActiveProgramId() {
+    const saved = localStorage.getItem(ACTIVE_PROGRAM_KEY);
+    return (saved && PROGRAMS[saved]) ? saved : "boxing";
+  }
+
+  let activeProgramId = loadActiveProgramId();
+
+  function loadState(programId) {
+    const def = PROGRAMS[programId];
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(def.storageKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         const rounds = Array.isArray(parsed.rounds) && parsed.rounds.length >= 1 && parsed.rounds.length <= 10
-          ? parsed.rounds : clonePlans(defaultRoundPlans);
+          ? parsed.rounds : clonePlans(def.defaultRounds);
         const warmup = parsed.warmup && typeof parsed.warmup.durationMin === 'number'
-          ? parsed.warmup : cloneWarmup(defaultWarmup);
+          ? parsed.warmup : cloneWarmup(def.defaultWarmup);
         return { rounds, warmup };
       }
-      // Migrate from the old rounds-only storage format if present.
-      const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
-      if (oldRaw) {
-        const oldParsed = JSON.parse(oldRaw);
-        if (Array.isArray(oldParsed) && oldParsed.length >= 1 && oldParsed.length <= 10) {
-          return { rounds: oldParsed, warmup: cloneWarmup(defaultWarmup) };
+      if (def.oldStorageKey) {
+        const oldRaw = localStorage.getItem(def.oldStorageKey);
+        if (oldRaw) {
+          const oldParsed = JSON.parse(oldRaw);
+          if (Array.isArray(oldParsed) && oldParsed.length >= 1 && oldParsed.length <= 10) {
+            return { rounds: oldParsed, warmup: cloneWarmup(def.defaultWarmup) };
+          }
         }
       }
     } catch (e) {}
-    return { rounds: clonePlans(defaultRoundPlans), warmup: cloneWarmup(defaultWarmup) };
+    return { rounds: clonePlans(def.defaultRounds), warmup: cloneWarmup(def.defaultWarmup) };
   }
 
-  const initialState = loadState();
+  const initialState = loadState(activeProgramId);
   let roundPlans = initialState.rounds;
   let warmupPlan = initialState.warmup;
 
   function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rounds: roundPlans, warmup: warmupPlan }));
+    localStorage.setItem(PROGRAMS[activeProgramId].storageKey, JSON.stringify({ rounds: roundPlans, warmup: warmupPlan }));
   }
 
-  const extraNote = "Add head movement: slip after every combo";
+
 
   function getPlanForRound(roundNum) {
     const defined = roundPlans.length;
@@ -519,7 +589,7 @@
     const base = roundPlans[baseIdx];
     return {
       label: "Round " + roundNum + " — " + base.label.replace(/^Round \d+ — /, ""),
-      segs: base.segs.map(s => ({ combo: s.combo, note: extraNote }))
+      segs: base.segs.map(s => ({ combo: s.combo, note: s.note }))
     };
   }
 
@@ -766,6 +836,7 @@
     warmupDurationEl.value = warmupPlan.durationMin;
     warmupDurationValEl.textContent = warmupPlan.durationMin;
     warmupTextEl2.value = warmupPlan.text;
+    warmupTextEl2.placeholder = PROGRAMS[activeProgramId].warmupPlaceholder;
 
     editRoundsEl.innerHTML = "";
     roundPlans.forEach((round, rIdx) => {
@@ -829,7 +900,7 @@
 
         const comboInput = document.createElement('input');
         comboInput.className = 'combo-input';
-        comboInput.placeholder = 'Combo, e.g. 1-2-3';
+        comboInput.placeholder = PROGRAMS[activeProgramId].comboPlaceholder;
         comboInput.value = seg.combo;
         comboInput.dataset.round = rIdx;
         comboInput.dataset.seg = sIdx;
@@ -919,6 +990,38 @@
   tabTimerBtn.addEventListener('click', () => switchTab('timer'));
   tabEditBtn.addEventListener('click', () => switchTab('edit'));
 
+  // --- Program switching (Shadow boxing / Calisthenics) ---
+  const appTitleEl = document.getElementById('appTitle');
+  const timerRuleTextEl = document.getElementById('timerRuleText');
+  const programBoxingBtn = document.getElementById('programBoxingBtn');
+  const programCalisthenicsBtn = document.getElementById('programCalisthenicsBtn');
+
+  function applyProgramUI() {
+    const def = PROGRAMS[activeProgramId];
+    appTitleEl.textContent = def.name + " timer";
+    timerRuleTextEl.textContent = def.ruleText;
+    programBoxingBtn.classList.toggle('active', activeProgramId === 'boxing');
+    programCalisthenicsBtn.classList.toggle('active', activeProgramId === 'calisthenics');
+  }
+
+  function switchProgram(programId) {
+    if (programId === activeProgramId) return;
+    activeProgramId = programId;
+    localStorage.setItem(ACTIVE_PROGRAM_KEY, activeProgramId);
+    const state = loadState(activeProgramId);
+    roundPlans = state.rounds;
+    warmupPlan = state.warmup;
+    applyProgramUI();
+    reset();
+    updateEstimate();
+    if (!editView.classList.contains('hidden')) renderEditForm();
+  }
+
+  programBoxingBtn.addEventListener('click', () => switchProgram('boxing'));
+  programCalisthenicsBtn.addEventListener('click', () => switchProgram('calisthenics'));
+
+  applyProgramUI();
+
   document.getElementById('saveEditsBtn').addEventListener('click', () => {
     collectEditForm();
     saveState();
@@ -947,10 +1050,11 @@
   });
 
   document.getElementById('resetDefaultsBtn').addEventListener('click', () => {
-    roundPlans = clonePlans(defaultRoundPlans);
-    warmupPlan = cloneWarmup(defaultWarmup);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(OLD_STORAGE_KEY);
+    const def = PROGRAMS[activeProgramId];
+    roundPlans = clonePlans(def.defaultRounds);
+    warmupPlan = cloneWarmup(def.defaultWarmup);
+    localStorage.removeItem(def.storageKey);
+    if (def.oldStorageKey) localStorage.removeItem(def.oldStorageKey);
     renderEditForm();
     updateEstimate();
     showToast('Reset to the original warm-up and workouts.');
