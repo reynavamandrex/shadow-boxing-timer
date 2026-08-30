@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Shadow Box">
+<title>Shadow Boxing Timer</title>
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --card: #16161a;
+    --border: #2a2a2f;
+    --text: #f2f2f0;
+    --text-dim: #8f8f96;
+    --accent: #d85a30;
+    --accent-dim: #4a2417;
+    --work: #1d9e75;
+    --work-dim: #0c2b21;
+    --rest: #378ada;
+    --rest-dim: #0d2138;
+    --warmup: #ba7517;
+    --warmup-dim: #2e1d08;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100%;
+    overscroll-behavior: none;
+  }
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  .setup {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .setup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .setup-label { font-size: 14px; color: var(--text-dim); }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .stepper button {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: #1f1f24;
+    color: var(--text);
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stepper button:active { transform: scale(0.94); }
+  .stepper .val {
+    font-size: 18px;
+    font-weight: 500;
+    min-width: 28px;
+    text-align: center;
+  }
+  .est {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+  .display {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .phase-tag {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 999px;
+  }
+  .tag-warmup { background: var(--warmup-dim); color: var(--warmup); }
+  .tag-work { background: var(--work-dim); color: var(--work); }
+  .tag-rest { background: var(--rest-dim); color: var(--rest); }
+  .tag-done { background: var(--accent-dim); color: var(--accent); }
+  .round-label {
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .clock {
+    font-size: 64px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    margin: 6px 0;
+  }
+  .combo {
+    font-size: 28px;
+    font-weight: 500;
+    text-align: center;
+    min-height: 40px;
+  }
+  .combo-note {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-align: center;
+    min-height: 20px;
+  }
+  .progress {
+    width: 100%;
+    height: 4px;
+    background: #232328;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: currentColor;
+    transition: width 1s linear;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .controls button {
+    flex: 1;
+    height: 52px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: #1f1f24;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .controls button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .controls button:active { transform: scale(0.98); }
+  .rule {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Shadow boxing timer</h1>
+  <div class="subtitle">Beginner combo-guided rounds</div>
+
+  <div class="setup" id="setup">
+    <div class="setup-row">
+      <span class="setup-label">Rounds</span>
+      <div class="stepper">
+        <button id="dec">−</button>
+        <span class="val" id="roundsVal">4</span>
+        <button id="inc">+</button>
+      </div>
+    </div>
+    <div class="est" id="estimate"></div>
+  </div>
+
+  <div class="display" id="display">
+    <div class="phase-tag tag-warmup" id="phaseTag">Ready</div>
+    <div class="round-label" id="roundLabel">Tap start when ready</div>
+    <div class="clock" id="clock">00:00</div>
+    <div class="combo" id="combo">—</div>
+    <div class="combo-note" id="comboNote">&nbsp;</div>
+    <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <div class="controls">
+    <button id="resetBtn">Reset</button>
+    <button id="startBtn" class="primary">Start</button>
+  </div>
+
+  <div class="rule">Hands return to guard after every punch.<br>No exceptions, even in round 4.</div>
+</div>
+
+<script>
+(function() {
+  const WARMUP = 180;
+  const WORK = 180;
+  const RESTP = 60;
+
+  const roundPlans = [
+    {
+      label: "Round 1 — singles",
+      segs: [
+        { combo: "1, 1, 1", note: "Jab only — reset guard each time" },
+        { combo: "2, 2, 2", note: "Cross only — rotate hips" },
+        { combo: "1-2, 1-2, 1-2", note: "Return to guard after each" }
+      ]
+    },
+    {
+      label: "Round 2 — add hooks",
+      segs: [
+        { combo: "1-2-3", note: "Jab, cross, lead hook" },
+        { combo: "3-2", note: "Lead hook, cross" },
+        { combo: "1-2-3-2", note: "Slow and controlled" }
+      ]
+    },
+    {
+      label: "Round 3 — speed + movement",
+      segs: [
+        { combo: "Footwork only", note: "Step in, step out, pivot — no punches" },
+        { combo: "1-1-2", note: "Double jab, cross — step forward" },
+        { combo: "1-2-1", note: "Step back after the last jab" }
+      ]
+    },
+    {
+      label: "Round 4 — under fatigue",
+      segs: [
+        { combo: "1-2-3-2", note: "No pause between reps" },
+        { combo: "Freestyle", note: "Mix combos, slip left/right" },
+        { combo: "1-2, 1-2, 1-2", note: "Max output, guard up between reps" }
+      ]
+    }
+  ];
+
+  const extraNote = "Add head movement: slip after every combo";
+
+  function getPlanForRound(roundNum) {
+    if (roundNum <= 4) return roundPlans[roundNum - 1];
+    const base = roundPlans[(roundNum % 2 === 1) ? 2 : 3];
+    return {
+      label: "Round " + roundNum + " — " + (roundNum % 2 === 1 ? "speed + movement" : "under fatigue"),
+      segs: base.segs.map(s => ({ combo: s.combo, note: extraNote }))
+    };
+  }
+
+  let totalRounds = 4;
+  let timerId = null;
+  let phase = "idle";
+  let phaseRemaining = 0;
+  let phaseTotal = 0;
+  let currentRound = 1;
+  let running = false;
+
+  const roundsValEl = document.getElementById('roundsVal');
+  const estimateEl = document.getElementById('estimate');
+  const setupEl = document.getElementById('setup');
+  const phaseTagEl = document.getElementById('phaseTag');
+  const roundLabelEl = document.getElementById('roundLabel');
+  const clockEl = document.getElementById('clock');
+  const comboEl = document.getElementById('combo');
+  const comboNoteEl = document.getElementById('comboNote');
+  const progressFillEl = document.getElementById('progressFill');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function updateEstimate() {
+    const totalSec = WARMUP + totalRounds * WORK + (totalRounds - 1) * RESTP;
+    const mins = Math.round(totalSec / 60);
+    estimateEl.textContent = "≈ " + mins + " min total (warm-up + " + totalRounds + " rounds)";
+  }
+
+  document.getElementById('dec').addEventListener('click', () => {
+    if (totalRounds > 2) { totalRounds--; roundsValEl.textContent = totalRounds; updateEstimate(); }
+  });
+  document.getElementById('inc').addEventListener('click', () => {
+    if (totalRounds < 8) { totalRounds++; roundsValEl.textContent = totalRounds; updateEstimate(); }
+  });
+  updateEstimate();
+
+  function fmt(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function beep(freq, dur) {
+    try {
+      const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  function setDisplayForPhase() {
+    if (phase === "warmup") {
+      phaseTagEl.className = "phase-tag tag-warmup";
+      phaseTagEl.textContent = "Warm-up";
+      roundLabelEl.textContent = "Jog, arm circles, torso twists, squats";
+      comboEl.textContent = "Get loose";
+      comboNoteEl.innerHTML = "&nbsp;";
+      progressFillEl.style.color = "var(--warmup)";
+    } else if (phase === "rest") {
+      phaseTagEl.className = "phase-tag tag-rest";
+      phaseTagEl.textContent = "Rest";
+      roundLabelEl.textContent = "Breathe, shake out arms";
+      comboEl.textContent = "Rest";
+      comboNoteEl.innerHTML = "&nbsp;";
+      progressFillEl.style.color = "var(--rest)";
+    } else if (phase === "work") {
+      phaseTagEl.className = "phase-tag tag-work";
+      const plan = getPlanForRound(currentRound);
+      phaseTagEl.textContent = "Round " + currentRound + " of " + totalRounds;
+      roundLabelEl.textContent = plan.label;
+      progressFillEl.style.color = "var(--work)";
+    } else if (phase === "done") {
+      phaseTagEl.className = "phase-tag tag-done";
+      phaseTagEl.textContent = "Complete";
+      roundLabelEl.textContent = "Nice work";
+      comboEl.textContent = "Cooldown & stretch";
+      comboNoteEl.innerHTML = "&nbsp;";
+      progressFillEl.style.width = "0%";
+    }
+  }
+
+  function updateWorkCombo() {
+    if (phase !== "work") return;
+    const plan = getPlanForRound(currentRound);
+    const elapsed = phaseTotal - phaseRemaining;
+    const segIdx = Math.min(2, Math.floor(elapsed / 60));
+    const seg = plan.segs[segIdx];
+    comboEl.textContent = seg.combo;
+    comboNoteEl.textContent = seg.note;
+  }
+
+  function tick() {
+    phaseRemaining--;
+    if (phase === "work") updateWorkCombo();
+    clockEl.textContent = fmt(phaseRemaining);
+    const pct = ((phaseTotal - phaseRemaining) / phaseTotal) * 100;
+    progressFillEl.style.width = pct + "%";
+
+    if (phaseRemaining <= 3 && phaseRemaining > 0) beep(880, 0.08);
+
+    if (phaseRemaining <= 0) {
+      advancePhase();
+    }
+  }
+
+  function advancePhase() {
+    if (phase === "warmup") {
+      beep(660, 0.2);
+      startWork();
+    } else if (phase === "work") {
+      if (currentRound >= totalRounds) {
+        beep(440, 0.5);
+        phase = "done";
+        clearInterval(timerId);
+        running = false;
+        startBtn.textContent = "Start";
+        setDisplayForPhase();
+        return;
+      }
+      beep(520, 0.2);
+      startRest();
+    } else if (phase === "rest") {
+      beep(660, 0.2);
+      currentRound++;
+      startWork();
+    }
+  }
+
+  function startWork() {
+    phase = "work";
+    phaseTotal = WORK;
+    phaseRemaining = WORK;
+    setDisplayForPhase();
+    updateWorkCombo();
+    clockEl.textContent = fmt(phaseRemaining);
+    progressFillEl.style.width = "0%";
+  }
+
+  function startRest() {
+    phase = "rest";
+    phaseTotal = RESTP;
+    phaseRemaining = RESTP;
+    setDisplayForPhase();
+    clockEl.textContent = fmt(phaseRemaining);
+    progressFillEl.style.width = "0%";
+  }
+
+  function startWarmup() {
+    phase = "warmup";
+    phaseTotal = WARMUP;
+    phaseRemaining = WARMUP;
+    currentRound = 1;
+    setDisplayForPhase();
+    clockEl.textContent = fmt(phaseRemaining);
+    progressFillEl.style.width = "0%";
+  }
+
+  function start() {
+    if (phase === "idle" || phase === "done") {
+      setupEl.classList.add('hidden');
+      startWarmup();
+    }
+    running = true;
+    startBtn.textContent = "Pause";
+    timerId = setInterval(tick, 1000);
+  }
+
+  function pause() {
+    running = false;
+    clearInterval(timerId);
+    startBtn.textContent = "Resume";
+  }
+
+  function reset() {
+    clearInterval(timerId);
+    running = false;
+    phase = "idle";
+    currentRound = 1;
+    setupEl.classList.remove('hidden');
+    phaseTagEl.className = "phase-tag tag-warmup";
+    phaseTagEl.textContent = "Ready";
+    roundLabelEl.textContent = "Tap start when ready";
+    clockEl.textContent = "00:00";
+    comboEl.textContent = "—";
+    comboNoteEl.innerHTML = "&nbsp;";
+    progressFillEl.style.width = "0%";
+    startBtn.textContent = "Start";
+  }
+
+  startBtn.addEventListener('click', () => {
+    if (!running) start(); else pause();
+  });
+  resetBtn.addEventListener('click', reset);
+})();
+</script>
+</body>
+</html>
