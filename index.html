@@ -270,12 +270,44 @@
     gap: 6px;
     margin-bottom: 10px;
   }
+  .edit-seg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   .edit-seg-label {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     color: var(--text-dim);
   }
+  .remove-min-btn {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 0;
+  }
+  .remove-min-btn:disabled {
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+  .add-min-btn {
+    width: 100%;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .add-min-btn:disabled {
+    opacity: 0.4;
+  }
+  .add-min-btn:active { transform: scale(0.98); }
   .edit-seg input {
     width: 100%;
     background: #1f1f24;
@@ -392,7 +424,6 @@
 
 <script>
 (function() {
-  const WORK = 180;
   const RESTP = 60;
 
   const STORAGE_KEY = "shadowBoxPlansV2";
@@ -513,7 +544,11 @@
   const resetBtn = document.getElementById('resetBtn');
 
   function updateEstimate() {
-    const totalSec = (warmupPlan.durationMin * 60) + totalRounds * WORK + (totalRounds - 1) * RESTP;
+    let workSec = 0;
+    for (let r = 1; r <= totalRounds; r++) {
+      workSec += getPlanForRound(r).segs.length * 60;
+    }
+    const totalSec = (warmupPlan.durationMin * 60) + workSec + (totalRounds - 1) * RESTP;
     const mins = Math.round(totalSec / 60);
     estimateEl.textContent = "≈ " + mins + " min total (warm-up + " + totalRounds + " rounds)";
   }
@@ -588,7 +623,7 @@
     if (phase !== "work") return;
     const plan = getPlanForRound(currentRound);
     const elapsed = phaseTotal - phaseRemaining;
-    const segIdx = Math.min(2, Math.floor(elapsed / 60));
+    const segIdx = Math.min(plan.segs.length - 1, Math.floor(elapsed / 60));
     const seg = plan.segs[segIdx];
     comboEl.textContent = seg.combo;
     comboNoteEl.textContent = seg.note;
@@ -633,8 +668,9 @@
 
   function startWork() {
     phase = "work";
-    phaseTotal = WORK;
-    phaseRemaining = WORK;
+    const plan = getPlanForRound(currentRound);
+    phaseTotal = plan.segs.length * 60;
+    phaseRemaining = phaseTotal;
     setDisplayForPhase();
     updateWorkCombo();
     clockEl.textContent = fmt(phaseRemaining);
@@ -704,11 +740,10 @@
   const editView = document.getElementById('editView');
   const editRoundsEl = document.getElementById('editRounds');
   const saveToastEl = document.getElementById('saveToast');
-  const segLabels = ["Minute 1", "Minute 2", "Minute 3"];
-
   const addRoundBtn = document.getElementById('addRoundBtn');
   const editRuleEl = document.getElementById('editRule');
   const MAX_ROUNDS = 10;
+  const MAX_MINUTES = 6;
 
   const warmupDurationEl = document.getElementById('warmupDuration');
   const warmupDurationValEl = document.getElementById('warmupDurationVal');
@@ -770,10 +805,27 @@
         const wrap = document.createElement('div');
         wrap.className = 'edit-seg';
 
+        const segHeader = document.createElement('div');
+        segHeader.className = 'edit-seg-header';
+
         const segLabel = document.createElement('div');
         segLabel.className = 'edit-seg-label';
-        segLabel.textContent = segLabels[sIdx];
-        wrap.appendChild(segLabel);
+        segLabel.textContent = 'Minute ' + (sIdx + 1);
+        segHeader.appendChild(segLabel);
+
+        const removeMinBtn = document.createElement('button');
+        removeMinBtn.className = 'remove-min-btn';
+        removeMinBtn.textContent = 'Remove';
+        removeMinBtn.disabled = round.segs.length <= 1;
+        removeMinBtn.addEventListener('click', () => {
+          if (round.segs.length <= 1) return;
+          collectEditForm();
+          roundPlans[rIdx].segs.splice(sIdx, 1);
+          renderEditForm();
+        });
+        segHeader.appendChild(removeMinBtn);
+
+        wrap.appendChild(segHeader);
 
         const comboInput = document.createElement('input');
         comboInput.className = 'combo-input';
@@ -794,6 +846,18 @@
 
         card.appendChild(wrap);
       });
+
+      const addMinBtn = document.createElement('button');
+      addMinBtn.className = 'add-min-btn';
+      addMinBtn.disabled = round.segs.length >= MAX_MINUTES;
+      addMinBtn.textContent = round.segs.length >= MAX_MINUTES ? "Max " + MAX_MINUTES + " min per round" : "+ Add minute";
+      addMinBtn.addEventListener('click', () => {
+        if (round.segs.length >= MAX_MINUTES) return;
+        collectEditForm();
+        roundPlans[rIdx].segs.push({ combo: "", note: "" });
+        renderEditForm();
+      });
+      card.appendChild(addMinBtn);
 
       editRoundsEl.appendChild(card);
     });
