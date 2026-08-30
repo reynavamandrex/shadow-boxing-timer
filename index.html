@@ -362,6 +362,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabTimerBtn">Timer</button>
     <button class="tab-btn" id="tabEditBtn">Edit workouts</button>
+    <button class="tab-btn" id="tabAccountBtn">Account</button>
   </div>
 
   <div id="timerView">
@@ -425,10 +426,42 @@
     </div>
     <div class="rule" id="editRule">If your session runs longer than the rounds you've defined, the extra rounds reuse the last two rounds' patterns.</div>
   </div>
+
+  <div id="accountView" class="hidden">
+    <div class="save-toast" id="accountToast">&nbsp;</div>
+    <div class="edit-round">
+      <div class="edit-round-title" id="accountStatus">Not logged in — changes are saved on this device only.</div>
+    </div>
+
+    <div id="authForm">
+      <div class="edit-round">
+        <div class="edit-seg">
+          <div class="edit-seg-label">Email</div>
+          <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="username">
+        </div>
+        <div class="edit-seg">
+          <div class="edit-seg-label">Password</div>
+          <input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="current-password">
+        </div>
+      </div>
+      <div class="edit-actions">
+        <button id="signupBtn">Sign up</button>
+        <button id="loginBtn" class="primary">Log in</button>
+      </div>
+    </div>
+
+    <button id="logoutBtn" class="add-round-btn hidden">Log out</button>
+
+    <div class="rule">Logging in syncs your warm-ups and rounds across devices. Without an account, everything still works — it just stays on this device.</div>
+  </div>
 </div>
 
 <script>
 (function() {
+  // Fill this in after deploying the shadowbox-api Worker (see README.md).
+  // Leave blank to use this app in guest/localStorage-only mode.
+  const API_BASE = "";
+
   const RESTP = 60;
 
   const ACTIVE_PROGRAM_KEY = "shadowBoxActiveProgram";
@@ -576,6 +609,9 @@
 
   function saveState() {
     localStorage.setItem(PROGRAMS[activeProgramId].storageKey, JSON.stringify({ rounds: roundPlans, warmup: warmupPlan }));
+    if (currentUser && API_BASE) {
+      pushServerData(activeProgramId, roundPlans, warmupPlan).catch(() => {});
+    }
   }
 
 
@@ -972,23 +1008,22 @@
     setTimeout(() => { saveToastEl.textContent = "\u00a0"; }, 2000);
   }
 
+  const tabAccountBtn = document.getElementById('tabAccountBtn');
+  const accountView = document.getElementById('accountView');
+
   function switchTab(tab) {
-    if (tab === 'timer') {
-      tabTimerBtn.classList.add('active');
-      tabEditBtn.classList.remove('active');
-      timerView.classList.remove('hidden');
-      editView.classList.add('hidden');
-    } else {
-      tabEditBtn.classList.add('active');
-      tabTimerBtn.classList.remove('active');
-      editView.classList.remove('hidden');
-      timerView.classList.add('hidden');
-      renderEditForm();
-    }
+    tabTimerBtn.classList.toggle('active', tab === 'timer');
+    tabEditBtn.classList.toggle('active', tab === 'edit');
+    tabAccountBtn.classList.toggle('active', tab === 'account');
+    timerView.classList.toggle('hidden', tab !== 'timer');
+    editView.classList.toggle('hidden', tab !== 'edit');
+    accountView.classList.toggle('hidden', tab !== 'account');
+    if (tab === 'edit') renderEditForm();
   }
 
   tabTimerBtn.addEventListener('click', () => switchTab('timer'));
   tabEditBtn.addEventListener('click', () => switchTab('edit'));
+  tabAccountBtn.addEventListener('click', () => switchTab('account'));
 
   // --- Program switching (Shadow boxing / Calisthenics) ---
   const appTitleEl = document.getElementById('appTitle');
@@ -1015,6 +1050,7 @@
     reset();
     updateEstimate();
     if (!editView.classList.contains('hidden')) renderEditForm();
+    if (currentUser) syncFromServer(activeProgramId);
   }
 
   programBoxingBtn.addEventListener('click', () => switchProgram('boxing'));
@@ -1059,6 +1095,120 @@
     updateEstimate();
     showToast('Reset to the original warm-up and workouts.');
   });
+
+  // --- Account tab: auth + server sync ---
+  let currentUser = null;
+
+  function apiFetch(path, options) {
+    return fetch(API_BASE + path, Object.assign(
+      { credentials: 'include', headers: { 'Content-Type': 'application/json' } },
+      options || {}
+    ));
+  }
+
+  async function pushServerData(program, rounds, warmup) {
+    if (!API_BASE) return;
+    await apiFetch('/api/data', {
+      method: 'POST',
+      body: JSON.stringify({ program, rounds, warmup })
+    });
+  }
+
+  async function syncFromServer(programId) {
+    if (!currentUser || !API_BASE) return;
+    try {
+      const res = await apiFetch('/api/data?program=' + encodeURIComponent(programId));
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rounds && data.warmup && programId === activeProgramId) {
+          roundPlans = data.rounds;
+          warmupPlan = data.warmup;
+          localStorage.setItem(PROGRAMS[programId].storageKey, JSON.stringify(data));
+          updateEstimate();
+          if (!editView.classList.contains('hidden')) renderEditForm();
+        }
+      } else if (res.status === 404) {
+        // No server copy yet for this program — push what's stored locally.
+        await pushServerData(programId, roundPlans, warmupPlan);
+      }
+    } catch (e) {}
+  }
+
+  const accountStatusEl = document.getElementById('accountStatus');
+  const authFormEl = document.getElementById('authForm');
+  const logoutBtnEl = document.getElementById('logoutBtn');
+  const accountToastEl = document.getElementById('accountToast');
+
+  function refreshAuthUI() {
+    if (currentUser) {
+      accountStatusEl.textContent = 'Logged in as ' + currentUser.email;
+      authFormEl.classList.add('hidden');
+      logoutBtnEl.classList.remove('hidden');
+    } else {
+      accountStatusEl.textContent = API_BASE
+        ? 'Not logged in — changes are saved on this device only.'
+        : 'Accounts aren\u2019t set up yet on this deployment — saving locally only.';
+      authFormEl.classList.remove('hidden');
+      logoutBtnEl.classList.add('hidden');
+    }
+  }
+
+  function accountToast(msg) {
+    accountToastEl.textContent = msg;
+    setTimeout(() => { accountToastEl.textContent = "\u00a0"; }, 3000);
+  }
+
+  document.getElementById('signupBtn').addEventListener('click', async () => {
+    if (!API_BASE) { accountToast('Accounts aren\u2019t set up yet on this deployment.'); return; }
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    if (!email || !password) { accountToast('Enter an email and password.'); return; }
+    try {
+      const res = await apiFetch('/api/signup', { method: 'POST', body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (!res.ok) { accountToast(data.error || 'Sign up failed.'); return; }
+      currentUser = { email: data.email };
+      refreshAuthUI();
+      await syncFromServer(activeProgramId);
+      accountToast('Account created and logged in.');
+    } catch (e) { accountToast('Could not reach the server.'); }
+  });
+
+  document.getElementById('loginBtn').addEventListener('click', async () => {
+    if (!API_BASE) { accountToast('Accounts aren\u2019t set up yet on this deployment.'); return; }
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    if (!email || !password) { accountToast('Enter an email and password.'); return; }
+    try {
+      const res = await apiFetch('/api/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (!res.ok) { accountToast(data.error || 'Log in failed.'); return; }
+      currentUser = { email: data.email };
+      refreshAuthUI();
+      await syncFromServer(activeProgramId);
+      accountToast('Logged in.');
+    } catch (e) { accountToast('Could not reach the server.'); }
+  });
+
+  logoutBtnEl.addEventListener('click', async () => {
+    try { await apiFetch('/api/logout', { method: 'POST' }); } catch (e) {}
+    currentUser = null;
+    refreshAuthUI();
+    accountToast('Logged out. Changes will now save on this device only.');
+  });
+
+  refreshAuthUI();
+
+  if (API_BASE) {
+    apiFetch('/api/me').then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        currentUser = { email: data.email };
+        refreshAuthUI();
+        await syncFromServer(activeProgramId);
+      }
+    }).catch(() => {});
+  }
 })();
 </script>
 </body>
