@@ -186,6 +186,135 @@
     line-height: 1.5;
   }
   .hidden { display: none; }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 0;
+    border-radius: 9px;
+  }
+  .tab-btn.active {
+    background: #232328;
+    color: var(--text);
+  }
+  .edit-round {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .edit-round-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .edit-round-title {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .remove-round-btn {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 4px 0;
+  }
+  .remove-round-btn:disabled {
+    color: var(--text-dim);
+    opacity: 0.5;
+  }
+  .add-round-btn {
+    width: 100%;
+    height: 48px;
+    border-radius: 14px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .add-round-btn:disabled {
+    opacity: 0.4;
+  }
+  .add-round-btn:active { transform: scale(0.98); }
+  .edit-round input.label-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .edit-seg {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .edit-seg-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-dim);
+  }
+  .edit-seg input {
+    width: 100%;
+    background: #1f1f24;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 14px;
+    padding: 9px 12px;
+    border-radius: 10px;
+  }
+  .edit-seg input.combo-input { font-weight: 500; }
+  .edit-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    margin-bottom: 12px;
+  }
+  .edit-actions button {
+    flex: 1;
+    height: 48px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: #1f1f24;
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .edit-actions button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .edit-actions button:active { transform: scale(0.98); }
+  .save-toast {
+    text-align: center;
+    font-size: 13px;
+    color: var(--work);
+    margin-bottom: 8px;
+    min-height: 16px;
+  }
 </style>
 </head>
 <body>
@@ -193,42 +322,82 @@
   <h1>Shadow boxing timer</h1>
   <div class="subtitle">Beginner combo-guided rounds</div>
 
-  <div class="setup" id="setup">
-    <div class="setup-row">
-      <span class="setup-label">Rounds</span>
-      <div class="stepper">
-        <button id="dec">−</button>
-        <span class="val" id="roundsVal">4</span>
-        <button id="inc">+</button>
+  <div class="tabs">
+    <button class="tab-btn active" id="tabTimerBtn">Timer</button>
+    <button class="tab-btn" id="tabEditBtn">Edit workouts</button>
+  </div>
+
+  <div id="timerView">
+    <div class="setup" id="setup">
+      <div class="setup-row">
+        <span class="setup-label">Rounds</span>
+        <div class="stepper">
+          <button id="dec">−</button>
+          <span class="val" id="roundsVal">4</span>
+          <button id="inc">+</button>
+        </div>
+      </div>
+      <div class="est" id="estimate"></div>
+    </div>
+
+    <div class="display" id="display">
+      <div class="phase-tag tag-warmup" id="phaseTag">Ready</div>
+      <div class="round-label" id="roundLabel">Tap start when ready</div>
+      <div class="clock" id="clock">00:00</div>
+      <div class="combo" id="combo">—</div>
+      <div class="combo-note" id="comboNote">&nbsp;</div>
+      <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="controls">
+      <button id="resetBtn">Reset</button>
+      <button id="startBtn" class="primary">Start</button>
+    </div>
+
+    <div class="rule">Hands return to guard after every punch.<br>No exceptions, even in round 4.</div>
+  </div>
+
+  <div id="editView" class="hidden">
+    <div class="save-toast" id="saveToast">&nbsp;</div>
+
+    <div class="edit-round">
+      <div class="edit-round-header">
+        <div class="edit-round-title">Warm-up</div>
+      </div>
+      <div class="edit-seg">
+        <div class="edit-seg-label">Duration (minutes)</div>
+        <div class="stepper">
+          <button id="warmupDec" type="button">−</button>
+          <span class="val" id="warmupDurationVal">3</span>
+          <button id="warmupInc" type="button">+</button>
+        </div>
+        <input type="hidden" id="warmupDuration" value="3">
+      </div>
+      <div class="edit-seg">
+        <div class="edit-seg-label">Instructions</div>
+        <input id="warmupText" placeholder="e.g. Jog, arm circles, torso twists">
       </div>
     </div>
-    <div class="est" id="estimate"></div>
-  </div>
 
-  <div class="display" id="display">
-    <div class="phase-tag tag-warmup" id="phaseTag">Ready</div>
-    <div class="round-label" id="roundLabel">Tap start when ready</div>
-    <div class="clock" id="clock">00:00</div>
-    <div class="combo" id="combo">—</div>
-    <div class="combo-note" id="comboNote">&nbsp;</div>
-    <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div id="editRounds"></div>
+    <button id="addRoundBtn" class="add-round-btn">+ Add round</button>
+    <div class="edit-actions">
+      <button id="resetDefaultsBtn">Reset to defaults</button>
+      <button id="saveEditsBtn" class="primary">Save changes</button>
+    </div>
+    <div class="rule" id="editRule">If your session runs longer than the rounds you've defined, the extra rounds reuse the last two rounds' patterns.</div>
   </div>
-
-  <div class="controls">
-    <button id="resetBtn">Reset</button>
-    <button id="startBtn" class="primary">Start</button>
-  </div>
-
-  <div class="rule">Hands return to guard after every punch.<br>No exceptions, even in round 4.</div>
 </div>
 
 <script>
 (function() {
-  const WARMUP = 180;
   const WORK = 180;
   const RESTP = 60;
 
-  const roundPlans = [
+  const STORAGE_KEY = "shadowBoxPlansV2";
+  const OLD_STORAGE_KEY = "shadowBoxPlans";
+
+  const defaultRoundPlans = [
     {
       label: "Round 1 — singles",
       segs: [
@@ -263,13 +432,61 @@
     }
   ];
 
+  const defaultWarmup = {
+    durationMin: 3,
+    text: "Jog, arm circles, torso twists, squats"
+  };
+
+  function clonePlans(plans) {
+    return plans.map(r => ({ label: r.label, segs: r.segs.map(s => ({ combo: s.combo, note: s.note })) }));
+  }
+
+  function cloneWarmup(w) {
+    return { durationMin: w.durationMin, text: w.text };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const rounds = Array.isArray(parsed.rounds) && parsed.rounds.length >= 1 && parsed.rounds.length <= 10
+          ? parsed.rounds : clonePlans(defaultRoundPlans);
+        const warmup = parsed.warmup && typeof parsed.warmup.durationMin === 'number'
+          ? parsed.warmup : cloneWarmup(defaultWarmup);
+        return { rounds, warmup };
+      }
+      // Migrate from the old rounds-only storage format if present.
+      const oldRaw = localStorage.getItem(OLD_STORAGE_KEY);
+      if (oldRaw) {
+        const oldParsed = JSON.parse(oldRaw);
+        if (Array.isArray(oldParsed) && oldParsed.length >= 1 && oldParsed.length <= 10) {
+          return { rounds: oldParsed, warmup: cloneWarmup(defaultWarmup) };
+        }
+      }
+    } catch (e) {}
+    return { rounds: clonePlans(defaultRoundPlans), warmup: cloneWarmup(defaultWarmup) };
+  }
+
+  const initialState = loadState();
+  let roundPlans = initialState.rounds;
+  let warmupPlan = initialState.warmup;
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rounds: roundPlans, warmup: warmupPlan }));
+  }
+
   const extraNote = "Add head movement: slip after every combo";
 
   function getPlanForRound(roundNum) {
-    if (roundNum <= 4) return roundPlans[roundNum - 1];
-    const base = roundPlans[(roundNum % 2 === 1) ? 2 : 3];
+    const defined = roundPlans.length;
+    if (roundNum <= defined) return roundPlans[roundNum - 1];
+    // Beyond the defined rounds, alternate between the last two defined rounds' patterns.
+    const offset = (roundNum - defined) % 2;
+    const baseIdx = defined === 1 ? 0 : (offset === 1 ? defined - 2 : defined - 1);
+    const base = roundPlans[baseIdx];
     return {
-      label: "Round " + roundNum + " — " + (roundNum % 2 === 1 ? "speed + movement" : "under fatigue"),
+      label: "Round " + roundNum + " — " + base.label.replace(/^Round \d+ — /, ""),
       segs: base.segs.map(s => ({ combo: s.combo, note: extraNote }))
     };
   }
@@ -295,7 +512,7 @@
   const resetBtn = document.getElementById('resetBtn');
 
   function updateEstimate() {
-    const totalSec = WARMUP + totalRounds * WORK + (totalRounds - 1) * RESTP;
+    const totalSec = (warmupPlan.durationMin * 60) + totalRounds * WORK + (totalRounds - 1) * RESTP;
     const mins = Math.round(totalSec / 60);
     estimateEl.textContent = "≈ " + mins + " min total (warm-up + " + totalRounds + " rounds)";
   }
@@ -304,7 +521,7 @@
     if (totalRounds > 2) { totalRounds--; roundsValEl.textContent = totalRounds; updateEstimate(); }
   });
   document.getElementById('inc').addEventListener('click', () => {
-    if (totalRounds < 8) { totalRounds++; roundsValEl.textContent = totalRounds; updateEstimate(); }
+    if (totalRounds < 10) { totalRounds++; roundsValEl.textContent = totalRounds; updateEstimate(); }
   });
   updateEstimate();
 
@@ -334,7 +551,7 @@
     if (phase === "warmup") {
       phaseTagEl.className = "phase-tag tag-warmup";
       phaseTagEl.textContent = "Warm-up";
-      roundLabelEl.textContent = "Jog, arm circles, torso twists, squats";
+      roundLabelEl.textContent = warmupPlan.text;
       comboEl.textContent = "Get loose";
       comboNoteEl.innerHTML = "&nbsp;";
       progressFillEl.style.color = "var(--warmup)";
@@ -429,8 +646,8 @@
 
   function startWarmup() {
     phase = "warmup";
-    phaseTotal = WARMUP;
-    phaseRemaining = WARMUP;
+    phaseTotal = warmupPlan.durationMin * 60;
+    phaseRemaining = phaseTotal;
     currentRound = 1;
     setDisplayForPhase();
     clockEl.textContent = fmt(phaseRemaining);
@@ -473,6 +690,198 @@
     if (!running) start(); else pause();
   });
   resetBtn.addEventListener('click', reset);
+
+  // --- Edit workouts tab ---
+  const tabTimerBtn = document.getElementById('tabTimerBtn');
+  const tabEditBtn = document.getElementById('tabEditBtn');
+  const timerView = document.getElementById('timerView');
+  const editView = document.getElementById('editView');
+  const editRoundsEl = document.getElementById('editRounds');
+  const saveToastEl = document.getElementById('saveToast');
+  const segLabels = ["Minute 1", "Minute 2", "Minute 3"];
+
+  const addRoundBtn = document.getElementById('addRoundBtn');
+  const editRuleEl = document.getElementById('editRule');
+  const MAX_ROUNDS = 10;
+
+  const warmupDurationEl = document.getElementById('warmupDuration');
+  const warmupDurationValEl = document.getElementById('warmupDurationVal');
+  const warmupTextEl2 = document.getElementById('warmupText');
+
+  document.getElementById('warmupDec').addEventListener('click', () => {
+    let v = parseInt(warmupDurationEl.value, 10) || 3;
+    if (v > 1) v--;
+    warmupDurationEl.value = v;
+    warmupDurationValEl.textContent = v;
+  });
+  document.getElementById('warmupInc').addEventListener('click', () => {
+    let v = parseInt(warmupDurationEl.value, 10) || 3;
+    if (v < 10) v++;
+    warmupDurationEl.value = v;
+    warmupDurationValEl.textContent = v;
+  });
+
+  function renderEditForm() {
+    warmupDurationEl.value = warmupPlan.durationMin;
+    warmupDurationValEl.textContent = warmupPlan.durationMin;
+    warmupTextEl2.value = warmupPlan.text;
+
+    editRoundsEl.innerHTML = "";
+    roundPlans.forEach((round, rIdx) => {
+      const card = document.createElement('div');
+      card.className = 'edit-round';
+
+      const header = document.createElement('div');
+      header.className = 'edit-round-header';
+
+      const title = document.createElement('div');
+      title.className = 'edit-round-title';
+      title.textContent = 'Round ' + (rIdx + 1);
+      header.appendChild(title);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-round-btn';
+      removeBtn.textContent = 'Remove';
+      removeBtn.disabled = roundPlans.length <= 1;
+      removeBtn.addEventListener('click', () => {
+        if (roundPlans.length <= 1) return;
+        collectEditForm();
+        roundPlans.splice(rIdx, 1);
+        renderEditForm();
+      });
+      header.appendChild(removeBtn);
+
+      card.appendChild(header);
+
+      const labelInput = document.createElement('input');
+      labelInput.className = 'label-input';
+      labelInput.value = round.label;
+      labelInput.dataset.round = rIdx;
+      labelInput.dataset.field = 'label';
+      card.appendChild(labelInput);
+
+      round.segs.forEach((seg, sIdx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'edit-seg';
+
+        const segLabel = document.createElement('div');
+        segLabel.className = 'edit-seg-label';
+        segLabel.textContent = segLabels[sIdx];
+        wrap.appendChild(segLabel);
+
+        const comboInput = document.createElement('input');
+        comboInput.className = 'combo-input';
+        comboInput.placeholder = 'Combo, e.g. 1-2-3';
+        comboInput.value = seg.combo;
+        comboInput.dataset.round = rIdx;
+        comboInput.dataset.seg = sIdx;
+        comboInput.dataset.field = 'combo';
+        wrap.appendChild(comboInput);
+
+        const noteInput = document.createElement('input');
+        noteInput.placeholder = 'Coaching note';
+        noteInput.value = seg.note;
+        noteInput.dataset.round = rIdx;
+        noteInput.dataset.seg = sIdx;
+        noteInput.dataset.field = 'note';
+        wrap.appendChild(noteInput);
+
+        card.appendChild(wrap);
+      });
+
+      editRoundsEl.appendChild(card);
+    });
+
+    addRoundBtn.disabled = roundPlans.length >= MAX_ROUNDS;
+    addRoundBtn.textContent = roundPlans.length >= MAX_ROUNDS ? "Max 10 rounds reached" : "+ Add round";
+
+    if (roundPlans.length >= MAX_ROUNDS) {
+      editRuleEl.textContent = "You're at the 10-round limit. A session can still run longer by repeating round " + (MAX_ROUNDS - 1) + " and " + MAX_ROUNDS + "'s pattern.";
+    } else {
+      editRuleEl.textContent = "If your session runs longer than the rounds you've defined, the extra rounds reuse the last two rounds' patterns.";
+    }
+  }
+
+  function collectEditForm() {
+    const warmupDurEl = document.getElementById('warmupDuration');
+    const warmupTextEl = document.getElementById('warmupText');
+    if (warmupDurEl) {
+      const mins = parseInt(warmupDurEl.value, 10);
+      if (!isNaN(mins) && mins >= 1 && mins <= 10) warmupPlan.durationMin = mins;
+    }
+    if (warmupTextEl) {
+      const val = warmupTextEl.value.trim();
+      warmupPlan.text = val || warmupPlan.text;
+    }
+    const inputs = editRoundsEl.querySelectorAll('input');
+    inputs.forEach(inp => {
+      const rIdx = parseInt(inp.dataset.round, 10);
+      if (inp.dataset.field === 'label') {
+        roundPlans[rIdx].label = inp.value.trim() || roundPlans[rIdx].label;
+      } else {
+        const sIdx = parseInt(inp.dataset.seg, 10);
+        const val = inp.value.trim();
+        roundPlans[rIdx].segs[sIdx][inp.dataset.field] = val || roundPlans[rIdx].segs[sIdx][inp.dataset.field];
+      }
+    });
+  }
+
+  function showToast(msg) {
+    saveToastEl.textContent = msg;
+    setTimeout(() => { saveToastEl.textContent = "\u00a0"; }, 2000);
+  }
+
+  function switchTab(tab) {
+    if (tab === 'timer') {
+      tabTimerBtn.classList.add('active');
+      tabEditBtn.classList.remove('active');
+      timerView.classList.remove('hidden');
+      editView.classList.add('hidden');
+    } else {
+      tabEditBtn.classList.add('active');
+      tabTimerBtn.classList.remove('active');
+      editView.classList.remove('hidden');
+      timerView.classList.add('hidden');
+      renderEditForm();
+    }
+  }
+
+  tabTimerBtn.addEventListener('click', () => switchTab('timer'));
+  tabEditBtn.addEventListener('click', () => switchTab('edit'));
+
+  document.getElementById('saveEditsBtn').addEventListener('click', () => {
+    collectEditForm();
+    saveState();
+    if (phase === 'work') setDisplayForPhase();
+    if (phase === 'warmup') setDisplayForPhase();
+    updateEstimate();
+    showToast('Saved. Your warm-up and rounds are updated.');
+  });
+
+  addRoundBtn.addEventListener('click', () => {
+    if (roundPlans.length >= MAX_ROUNDS) return;
+    collectEditForm();
+    const n = roundPlans.length + 1;
+    roundPlans.push({
+      label: "Round " + n + " — new",
+      segs: [
+        { combo: "", note: "" },
+        { combo: "", note: "" },
+        { combo: "", note: "" }
+      ]
+    });
+    renderEditForm();
+  });
+
+  document.getElementById('resetDefaultsBtn').addEventListener('click', () => {
+    roundPlans = clonePlans(defaultRoundPlans);
+    warmupPlan = cloneWarmup(defaultWarmup);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(OLD_STORAGE_KEY);
+    renderEditForm();
+    updateEstimate();
+    showToast('Reset to the original warm-up and workouts.');
+  });
 })();
 </script>
 </body>
