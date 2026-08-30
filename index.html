@@ -547,6 +547,11 @@
     } catch (e) {}
   }
 
+  function bell() {
+    beep(880, 0.15);
+    setTimeout(() => beep(880, 0.15), 180);
+  }
+
   function setDisplayForPhase() {
     if (phase === "warmup") {
       phaseTagEl.className = "phase-tag tag-warmup";
@@ -608,7 +613,7 @@
       startWork();
     } else if (phase === "work") {
       if (currentRound >= totalRounds) {
-        beep(440, 0.5);
+        bell();
         phase = "done";
         clearInterval(timerId);
         running = false;
@@ -616,10 +621,10 @@
         setDisplayForPhase();
         return;
       }
-      beep(520, 0.2);
+      bell();
       startRest();
     } else if (phase === "rest") {
-      beep(660, 0.2);
+      bell();
       currentRound++;
       startWork();
     }
