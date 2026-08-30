@@ -318,6 +318,27 @@
     border-radius: 10px;
   }
   .edit-seg input.combo-input { font-weight: 500; }
+  .password-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .password-wrap input {
+    padding-right: 56px;
+  }
+  .toggle-password-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 8px;
+  }
+  .toggle-password-btn:active { transform: translateY(-50%) scale(0.95); }
   .edit-actions {
     display: flex;
     gap: 12px;
@@ -441,7 +462,10 @@
         </div>
         <div class="edit-seg">
           <div class="edit-seg-label">Password</div>
-          <input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="current-password">
+          <div class="password-wrap">
+            <input id="authPassword" type="password" placeholder="At least 6 characters" autocomplete="current-password">
+            <button type="button" id="togglePasswordBtn" class="toggle-password-btn" aria-label="Show password">Show</button>
+          </div>
         </div>
       </div>
       <div class="edit-actions">
@@ -1157,6 +1181,15 @@
     accountToastEl.textContent = msg;
     setTimeout(() => { accountToastEl.textContent = "\u00a0"; }, 3000);
   }
+
+  const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+  const authPasswordEl = document.getElementById('authPassword');
+  togglePasswordBtn.addEventListener('click', () => {
+    const showing = authPasswordEl.type === 'text';
+    authPasswordEl.type = showing ? 'password' : 'text';
+    togglePasswordBtn.textContent = showing ? 'Show' : 'Hide';
+    togglePasswordBtn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  });
 
   document.getElementById('signupBtn').addEventListener('click', async () => {
     if (!API_BASE) { accountToast('Accounts aren\u2019t set up yet on this deployment.'); return; }
