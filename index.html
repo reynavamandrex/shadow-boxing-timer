@@ -328,6 +328,7 @@
   </div>
 
   <div id="timerView">
+    <div class="save-toast" id="homeToast">&nbsp;</div>
     <div class="setup" id="setup">
       <div class="setup-row">
         <span class="setup-label">Rounds</span>
@@ -860,7 +861,10 @@
     if (phase === 'work') setDisplayForPhase();
     if (phase === 'warmup') setDisplayForPhase();
     updateEstimate();
-    showToast('Saved. Your warm-up and rounds are updated.');
+    switchTab('timer');
+    const homeToastEl = document.getElementById('homeToast');
+    homeToastEl.textContent = 'Saved. Your warm-up and rounds are updated.';
+    setTimeout(() => { homeToastEl.textContent = "\u00a0"; }, 2500);
   });
 
   addRoundBtn.addEventListener('click', () => {
